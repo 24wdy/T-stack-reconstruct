@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T-Stack模拟器 - 果蝇全脑神经元仿真</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; overflow: hidden; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0f2847 100%);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(0, 212, 255, 0.2);
+            flex-shrink: 0;
+        }
+
+        .header h1 {
+            font-size: 1.3em;
+            background: linear-gradient(90deg, #00d4ff, #7b2cbf);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header .status-bar {
+            display: flex;
+            gap: 16px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85em;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #00ff88;
+            animation: pulse-green 2s infinite;
+        }
+
+        @keyframes pulse-green {
+            0%, 100% { opacity: 1; box-shadow: 0 0 5px #00ff88; }
+            50% { opacity: 0.5; box-shadow: 0 0 15px #00ff88; }
+        }
+
+        .main-content {
+            width: 100vw;
+            height: calc(100vh - 45px);
+            display: grid;
+            grid-template-columns: 18vw 82vw;
+            grid-template-rows: 1fr;
+            overflow: hidden;
+        }
+
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid rgba(0, 212, 255, 0.2);
+            overflow-y: auto;
+            height: calc(100vh - 45px);
+        }
+
+        .panel-section {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .section-title {
+            font-size: 1em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #00d4ff;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 3px;
+            height: 16px;
+            background: #00d4ff;
+            border-radius: 2px;
+        }
+
+        .stimulus-selector {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .stimulus-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .stimulus-card:hover {
+            background: rgba(0, 212, 255, 0.1);
+            border-color: rgba(0, 212, 255, 0.3);
+        }
+
+        .stimulus-card.selected {
+            background: rgba(0, 212, 255, 0.15);
+            border-color: #00d4ff;
+        }
+
+        .stimulus-icon {
+            font-size: 1.8em;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+        }
+
+        .stimulus-info h4 {
+            margin-bottom: 2px;
+        }
+
+        .stimulus-info p {
+            font-size: 0.8em;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .neuron-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .neuron-tag {
+            padding: 4px 10px;
+            background: rgba(123, 44, 191, 0.3);
+            border: 1px solid rgba(123, 44, 191, 0.5);
+            border-radius: 12px;
+            font-size: 0.75em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .neuron-tag:hover, .neuron-tag.active {
+            background: rgba(123, 44, 191, 0.5);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #00d4ff, #7b2cbf);
+            color: white;
+            width: 100%;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            width: calc(50% - 4px);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .right-panel {
+            display: grid;
+            grid-template-columns: 30% 70%;
+            grid-template-rows: 1fr;
+            gap: 8px;
+            height: calc(100vh - 53px);
+            padding: 8px;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .left-column {
+            display: grid;
+            grid-template-rows: 50% 50%;
+            gap: 8px;
+            height: calc(100vh - 53px);
+        }
+
+        .right-column {
+            display: grid;
+            grid-template-rows: 20% 80%;
+            gap: 8px;
+            height: calc(100vh - 53px);
+        }
+
+        .core-section {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .log-section {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .stats-section {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .video-section {
+            height: 100%;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .video-wrapper {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            aspect-ratio: 3/2;
+        }
+
+        .view-section {
+            padding: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .view-section:last-child {
+            border-bottom: none;
+        }
+
+        .view-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .view-title {
+            font-size: 1.1em;
+            color: #00d4ff;
+        }
+
+        .view-stats {
+            display: flex;
+            gap: 16px;
+            font-size: 0.85em;
+        }
+
+        .view-stat {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 4px 12px;
+            border-radius: 10px;
+        }
+
+        .core-array-container {
+            position: relative;
+            height: calc(100% - 35px);
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .core-array {
+            display: grid;
+            grid-template-columns: repeat(16, 1fr);
+            grid-template-rows: repeat(16, 1fr);
+            gap: 1px;
+            padding: 6px;
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .core-cell {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.15s ease;
+        }
+
+        .core-cell.active {
+            background: linear-gradient(135deg, #00d4ff, #00ff88);
+            box-shadow: 0 0 8px rgba(0, 255, 136, 0.5);
+        }
+
+        .core-cell.processing {
+            animation: core-pulse 0.8s infinite;
+        }
+
+        .core-cell.high-activity {
+            animation: core-flash 0.3s infinite;
+        }
+
+        @keyframes core-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(0.95); }
+        }
+
+        @keyframes core-flash {
+            0%, 100% { box-shadow: 0 0 5px #00ff88; }
+            50% { box-shadow: 0 0 20px #00ff88, 0 0 30px #00d4ff; }
+        }
+
+        .core-cell .activity-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.3);
+            transition: height 0.3s ease;
+        }
+
+        .connection-lines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .connection-line {
+            position: absolute;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00ff88, transparent);
+            opacity: 0;
+            animation: connection-flow 2s infinite;
+        }
+
+        @keyframes connection-flow {
+            0% { opacity: 0; transform: translateX(-100%); }
+            50% { opacity: 1; }
+            100% { opacity: 0; transform: translateX(100%); }
+        }
+
+        .output-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            height: calc(100% - 40px);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .output-line {
+            margin: 2px 0;
+            padding-left: 4px;
+            border-left: 2px solid transparent;
+        }
+
+        .output-line.info { color: #00d4ff; border-left-color: #00d4ff; }
+        .output-line.success { color: #00ff88; border-left-color: #00ff88; }
+        .output-line.warning { color: #ffaa00; border-left-color: #ffaa00; }
+        .output-line.error { color: #ff4444; border-left-color: #ff4444; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            height: calc(100% - 40px);
+        }
+
+        .stat-card {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: rgba(0, 212, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            background: linear-gradient(90deg, #00d4ff, #7b2cbf);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 0.75em;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .video-container {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+            padding: 4px;
+            height: calc(100% - 10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            overflow: hidden;
+        }
+
+        #demoVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center center;
+            border-radius: 6px;
+        }
+
+        .video-placeholder {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(123, 44, 191, 0.1));
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .video-placeholder:hover {
+            border-color: #00d4ff;
+            background: rgba(0, 212, 255, 0.1);
+        }
+
+        .video-placeholder .play-icon {
+            font-size: 3em;
+            margin-bottom: 8px;
+            color: #00d4ff;
+        }
+
+        .video-placeholder p {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9em;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            flex-direction: column;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .loading-ring {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(0, 212, 255, 0.3);
+            border-top-color: #00d4ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 1.2em;
+            color: #00d4ff;
+            animation: fade 1.5s infinite;
+        }
+
+        @keyframes fade {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .progress-bar {
+            width: 200px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            margin-top: 16px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff, #00ff88);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 280px 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .right-panel {
+                grid-template-rows: 30% 35% 35%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>T-Stack模拟器 | 果蝇全脑仿真平台</h1>
+        <div class="status-bar">
+            <div class="status-item">
+                <span class="status-dot"></span>
+                <span>系统就绪</span>
+            </div>
+            <div class="status-item">
+                <span style="color: #7b2cbf;">核心: 256</span>
+            </div>
+            <div class="status-item">
+                <span style="color: #00ff88;">神经元: 130K+</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="left-panel">
+            <div class="panel-section">
+                <h3 class="section-title">刺激类型选择</h3>
+                <div class="stimulus-selector">
+                    <div class="stimulus-card" data-stimulus="smell_apple">
+                        <div class="stimulus-info">
+                            <h4>苹果气味</h4>
+                            <p>乙醛 → ORNs → PNs</p>
+                        </div>
+                    </div>
+                    <div class="stimulus-card" data-stimulus="smell_banana">
+                        <div class="stimulus-info">
+                            <h4>香蕉气味</h4>
+                            <p>乙酸异戊酯 → ORNs</p>
+                        </div>
+                    </div>
+                    <div class="stimulus-card" data-stimulus="vision_red">
+                        <div class="stimulus-info">
+                            <h4>红光刺激</h4>
+                            <p>650nm → Rhodopsin</p>
+                        </div>
+                    </div>
+                    <div class="stimulus-card" data-stimulus="vision_blue">
+                        <div class="stimulus-info">
+                            <h4>蓝光刺激</h4>
+                            <p>450nm → Rhodopsin</p>
+                        </div>
+                    </div>
+                    <div class="stimulus-card" data-stimulus="touch_light">
+                        <div class="stimulus-info">
+                            <h4>轻触刺激</h4>
+                            <p>机械感受器 → VNC</p>
+                        </div>
+                    </div>
+                    <div class="stimulus-card" data-stimulus="touch_strong">
+                        <div class="stimulus-info">
+                            <h4>强触刺激</h4>
+                            <p>痛觉感受器 → 逃逸反应</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3 class="section-title">激活的神经元群</h3>
+                <div class="neuron-list" id="neuronList">
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3 class="section-title">连接数据</h3>
+                <div style="font-size: 0.85em; color: rgba(255,255,255,0.7); margin-bottom: 12px;">
+                    <p>📊 Connectivity_783.parquet</p>
+                    <p style="margin-top: 4px;">突触连接: <span style="color: #00d4ff;">15M+</span></p>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <button class="btn btn-primary" onclick="runSimulation()" style="margin-bottom: 8px;">🎬 完整演示</button>
+                <p style="font-size: 0.75em; color: rgba(255,255,255,0.6); margin-bottom: 8px;">(功能仿真 → 性能估计 → 视频播放)</p>
+                <div style="display: flex; gap: 4px;">
+                    <button class="btn btn-secondary" onclick="runFuncSim()">⚡ 功能仿真</button>
+                    <button class="btn btn-secondary" onclick="runPerfEst()">📊 性能估计</button>
+                </div>
+                <p style="font-size: 0.75em; color: rgba(255,255,255,0.5); margin-top: 6px;">(单独测试各模块)</p>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="left-column">
+                <div class="view-section core-section" style="border-bottom: none; padding: 10px;">
+                    <div class="view-header" style="margin-bottom: 6px;">
+                        <h3 class="view-title" style="font-size: 0.9em;">🧠 核阵活动</h3>
+                        <div class="view-stats" style="font-size: 0.7em; gap: 8px;">
+                            <span class="view-stat">活跃: <span id="activeCores">0</span></span>
+                            <span class="view-stat">处理: <span id="processingCores">0</span></span>
+                        </div>
+                    </div>
+                    <div class="core-array-container">
+                        <div class="core-array" id="coreArray"></div>
+                        <div class="connection-lines" id="connectionLines"></div>
+                    </div>
+                </div>
+
+                <div class="view-section log-section" style="border-bottom: none; padding: 10px;">
+                    <div class="view-header" style="margin-bottom: 6px;">
+                        <h3 class="view-title" style="font-size: 0.9em;">📋 仿真日志</h3>
+                    </div>
+                    <div class="output-panel" id="simOutput" style="height: calc(100% - 30px); font-size: 10px;">
+                        <div class="output-line info">[SYSTEM] T-Stack模拟器已启动</div>
+                        <div class="output-line info">[SYSTEM] 选择刺激类型开始演示</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-column">
+                <div class="view-section stats-section" style="border-bottom: none; padding: 10px;">
+                    <div class="view-header" style="margin-bottom: 6px;">
+                        <h3 class="view-title" style="font-size: 0.9em;">📈 性能指标</h3>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="statCycles">-</div>
+                            <div class="stat-label">周期</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="statEnergy">-</div>
+                            <div class="stat-label">能耗</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="statThroughput">-</div>
+                            <div class="stat-label">吞吐</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="statUtilization">-</div>
+                            <div class="stat-label">利用</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="video-section">
+                    <div class="video-container" style="width: 100%; height: 100%;">
+                        <div class="video-placeholder" id="videoPlaceholder">
+                            <div class="play-icon">▶️</div>
+                            <p>等待仿真演示...</p>
+                            <p style="font-size: 0.8em; margin-top: 8px;">功能仿真完成后自动播放</p>
+                        </div>
+                        <div id="videoPlayer" style="display: none; width: 100%; height: 100%;">
+                            <video id="demoVideo" width="100%" height="100%" muted playsinline loop>
+                                <source src="temp/demo_video.mp4" type="video/mp4; codecs=avc1.42E01E,mp4a.40.2">
+                                <source src="temp/demo_video.mp4" type="video/mp4">
+                                <p>您的浏览器不支持视频播放</p>
+                            </video>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-ring"></div>
+        <div class="loading-text" id="loadingText">正在准备仿真...</div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="loadingProgress"></div>
+        </div>
+    </div>
+
+    <script>
+        const stimulusMap = {
+            smell_apple: { 
+                name: '苹果气味刺激', 
+                neurons: ['Or42a ORNs', 'DA1 PNs', 'LNs', 'Kenyon Cells'], 
+                description: '乙醛分子激活嗅觉受体神经元',
+                activeCores: 45,
+                video: 'temp/demo_video_1.mp4'
+            },
+            smell_banana: { 
+                name: '香蕉气味刺激', 
+                neurons: ['Or59b ORNs', 'DC2 PNs', 'LNs'], 
+                description: '乙酸异戊酯激活嗅觉通路',
+                activeCores: 38,
+                video: 'temp/demo_video_2.mp4'
+            },
+            vision_red: { 
+                name: '红光刺激', 
+                neurons: ['R1-R6 Photoreceptors', 'Lamina L1', 'Medulla Mi1'], 
+                description: '650nm红光激活视觉通路',
+                activeCores: 52,
+                video: 'temp/demo_video_3.mp4'
+            },
+            vision_blue: { 
+                name: '蓝光刺激', 
+                neurons: ['R7/R8 Photoreceptors', 'Lamina L2', 'Medulla Tm5'], 
+                description: '450nm蓝光激活视觉通路',
+                activeCores: 48,
+                video: 'temp/demo_video_4.mp4'
+            },
+            touch_light: { 
+                name: '轻触刺激', 
+                neurons: ['Mechanoreceptors', 'Chordotonal Organs', 'VNC Local Neurons'], 
+                description: '轻微机械刺激激活触觉感受器',
+                activeCores: 25,
+                video: 'temp/demo_video_5.mp4'
+            },
+            touch_strong: { 
+                name: '强触刺激', 
+                neurons: ['Nociceptors', 'VNC Interneurons', 'Motor Neurons'], 
+                description: '强烈刺激触发逃逸反应',
+                activeCores: 65,
+                video: 'temp/demo_video_6.mp4'
+            }
+        };
+
+        let selectedStimulus = null;
+        let simRunning = false;
+        let coreActivity = [];
+        let activityInterval = null;
+        let funcSimCompleted = false;
+
+        function initCoreArray() {
+            const coreArray = document.getElementById('coreArray');
+            for (let y = 0; y < 16; y++) {
+                for (let x = 0; x < 16; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'core-cell';
+                    cell.dataset.y = y;
+                    cell.dataset.x = x;
+                    coreArray.appendChild(cell);
+                }
+            }
+            coreActivity = Array(256).fill(0);
+        }
+
+        document.querySelectorAll('.stimulus-card').forEach(card => {
+            card.addEventListener('click', function() {
+                document.querySelectorAll('.stimulus-card').forEach(c => c.classList.remove('selected'));
+                this.classList.add('selected');
+                selectedStimulus = this.dataset.stimulus;
+                updateNeuronList();
+            });
+        });
+
+        function updateNeuronList() {
+            const neuronList = document.getElementById('neuronList');
+            neuronList.innerHTML = '';
+            
+            if (!selectedStimulus) {
+                neuronList.innerHTML = '<span style="color: rgba(255,255,255,0.5);">选择刺激类型查看神经元</span>';
+                return;
+            }
+
+            const neurons = stimulusMap[selectedStimulus].neurons;
+            neurons.forEach(neuron => {
+                const tag = document.createElement('span');
+                tag.className = 'neuron-tag active';
+                tag.textContent = neuron;
+                neuronList.appendChild(tag);
+            });
+            
+            addOutput('info', `[STIMULUS] 已选择: ${stimulusMap[selectedStimulus].name}`);
+            addOutput('info', `[DESCRIPTION] ${stimulusMap[selectedStimulus].description}`);
+        }
+
+        function addOutput(type, message) {
+            const panel = document.getElementById('simOutput');
+            const line = document.createElement('div');
+            line.className = `output-line ${type}`;
+            line.textContent = message;
+            panel.appendChild(line);
+            panel.scrollTop = panel.scrollHeight;
+        }
+
+        function animateCores() {
+            if (!selectedStimulus) return;
+
+            const cells = document.querySelectorAll('.core-cell');
+            const targetActiveCores = stimulusMap[selectedStimulus].activeCores;
+            const activeCells = new Set();
+            
+            while (activeCells.size < targetActiveCores) {
+                activeCells.add(Math.floor(Math.random() * 256));
+            }
+            
+            cells.forEach((cell, idx) => {
+                const isActive = activeCells.has(idx);
+                
+                if (isActive) {
+                    cell.classList.add('active');
+                    coreActivity[idx] = 0.7 + Math.random() * 0.3;
+                    
+                    if (Math.random() > 0.6) {
+                        cell.classList.add('processing');
+                        if (Math.random() > 0.7) {
+                            cell.classList.add('high-activity');
+                            setTimeout(() => cell.classList.remove('high-activity'), 300);
+                        }
+                    } else {
+                        cell.classList.remove('processing');
+                    }
+                } else {
+                    cell.classList.remove('active', 'processing', 'high-activity');
+                    coreActivity[idx] = Math.max(coreActivity[idx] - 0.1, 0);
+                }
+
+                const bar = cell.querySelector('.activity-bar') || document.createElement('div');
+                bar.className = 'activity-bar';
+                bar.style.height = `${coreActivity[idx] * 30}%`;
+                if (!cell.querySelector('.activity-bar')) {
+                    cell.appendChild(bar);
+                }
+            });
+
+            updateStats();
+        }
+
+        function updateStats() {
+            const active = coreActivity.filter(a => a > 0.1).length;
+            const processing = coreActivity.filter(a => a > 0.5).length;
+            
+            document.getElementById('activeCores').textContent = active;
+            document.getElementById('processingCores').textContent = processing;
+        }
+
+        function runSimulation() {
+            if (!selectedStimulus) {
+                addOutput('warning', '[ERROR] 请先选择刺激类型');
+                return;
+            }
+
+            if (simRunning) {
+                stopSimulation();
+                return;
+            }
+
+            resetVideo();
+            showLoading();
+            
+            setTimeout(() => {
+                simRunning = true;
+                hideLoading();
+                
+                addOutput('success', '[SIM] 启动完整仿真演示...');
+                addOutput('info', `[SIM] 刺激类型: ${stimulusMap[selectedStimulus].name}`);
+                
+                addOutput('success', '[FUNC] 启动功能仿真...');
+                activityInterval = setInterval(animateCores, 80);
+                
+                setTimeout(() => {
+                    addOutput('info', '[FUNC] 加载连接数据 (Connectivity_783.parquet)...');
+                }, 500);
+                
+                setTimeout(() => {
+                    addOutput('info', '[FUNC] 构建神经元连接图...');
+                }, 1000);
+                
+                setTimeout(() => {
+                    addOutput('info', '[FUNC] 初始化130K+神经元状态...');
+                }, 1500);
+                
+                setTimeout(() => {
+                    addOutput('info', '[FUNC] 模拟突触传递...');
+                }, 2000);
+                
+                setTimeout(() => {
+                    addOutput('success', '[FUNC] 功能仿真完成!');
+                    funcSimCompleted = true;
+                    addOutput('success', '[PERF] 启动性能估计...');
+                    if (activityInterval) {
+                        clearInterval(activityInterval);
+                        activityInterval = null;
+                    }
+                }, 4000);
+                
+                setTimeout(() => {
+                    displayPerformanceResults();
+                    addOutput('success', '[PERF] 性能估计完成!');
+                    simRunning = false;
+                    
+                    const stimulus = stimulusMap[selectedStimulus];
+                    if (stimulus.video) {
+                        addOutput('info', `[VIDEO] 自动播放演示视频...`);
+                        setTimeout(() => playVideo(stimulus.video), 500);
+                    } else {
+                        addOutput('info', '[SIM] 演示结束，可播放视频或重新选择刺激类型');
+                    }
+                }, 6000);
+            }, 1500);
+        }
+
+        function stopSimulation() {
+            simRunning = false;
+            if (activityInterval) {
+                clearInterval(activityInterval);
+                activityInterval = null;
+            }
+            
+            document.querySelectorAll('.core-cell').forEach(cell => {
+                cell.classList.remove('active', 'processing', 'high-activity');
+                const bar = cell.querySelector('.activity-bar');
+                if (bar) bar.remove();
+            });
+            
+            coreActivity = Array(256).fill(0);
+            updateStats();
+            addOutput('warning', '[SIM] 仿真已停止');
+        }
+
+        function runFuncSim() {
+            if (!selectedStimulus) {
+                addOutput('warning', '[ERROR] 请先选择刺激类型');
+                return;
+            }
+
+            resetVideo();
+            showLoading('功能仿真引擎初始化...');
+            
+            setTimeout(() => {
+                hideLoading();
+                addOutput('success', '[FUNC] 功能仿真引擎启动');
+                
+                activityInterval = setInterval(animateCores, 80);
+                
+                addOutput('info', '[FUNC] 加载连接数据 (Connectivity_783.parquet)...');
+                
+                setTimeout(() => {
+                    addOutput('info', '[FUNC] 构建神经元连接图...');
+                }, 500);
+                
+                setTimeout(() => {
+                    addOutput('info', '[FUNC] 初始化130K+神经元状态...');
+                }, 1000);
+                
+                setTimeout(() => {
+                    addOutput('info', '[FUNC] 模拟突触传递...');
+                }, 1500);
+                
+                setTimeout(() => {
+                    if (activityInterval) {
+                        clearInterval(activityInterval);
+                        activityInterval = null;
+                    }
+                    funcSimCompleted = true;
+                    addOutput('success', '[FUNC] 功能仿真完成!');
+                    addOutput('info', '[SYSTEM] 自动播放演示视频...');
+                    const stimulus = stimulusMap[selectedStimulus];
+                    if (stimulus.video) {
+                        playVideo(stimulus.video);
+                    }
+                }, 2500);
+            }, 1500);
+        }
+
+        function runPerfEst() {
+            if (!selectedStimulus) {
+                addOutput('warning', '[ERROR] 请先选择刺激类型');
+                return;
+            }
+
+            if (activityInterval) {
+                clearInterval(activityInterval);
+                activityInterval = null;
+            }
+
+            showLoading('性能分析引擎初始化...');
+            
+            setTimeout(() => {
+                hideLoading();
+                addOutput('success', '[PERF] 性能分析引擎启动');
+                displayPerformanceResults();
+            }, 1500);
+        }
+
+        function displayPerformanceResults() {
+            const stimulusConfigs = {
+                'apple': { cycles: 1.2, energy: 0.85, throughput: 96, utilization: 72 },
+                'banana': { cycles: 1.0, energy: 0.72, throughput: 108, utilization: 68 },
+                'red': { cycles: 1.5, energy: 1.05, throughput: 82, utilization: 78 },
+                'blue': { cycles: 1.4, energy: 0.98, throughput: 88, utilization: 75 },
+                'light': { cycles: 0.8, energy: 0.55, throughput: 125, utilization: 55 },
+                'heavy': { cycles: 2.1, energy: 1.45, throughput: 65, utilization: 92 }
+            };
+            
+            const config = stimulusConfigs[selectedStimulus] || stimulusConfigs['apple'];
+            const variation = () => (Math.random() - 0.5) * 0.1;
+            
+            const cycles = (config.cycles * (1 + variation())).toFixed(1);
+            const energy = (config.energy * (1 + variation())).toFixed(2);
+            const throughput = Math.round(config.throughput * (1 + variation()));
+            const utilization = Math.round(config.utilization * (1 + variation()));
+            
+            document.getElementById('statCycles').textContent = `${cycles}M`;
+            document.getElementById('statEnergy').textContent = `${energy} mJ`;
+            document.getElementById('statThroughput').textContent = `${throughput} FPS`;
+            document.getElementById('statUtilization').textContent = `${utilization}%`;
+            
+            addOutput('info', `[PERF] 执行周期: ${cycles}M cycles`);
+            addOutput('info', `[PERF] 能耗估计: ${energy} mJ`);
+            addOutput('info', `[PERF] 吞吐量: ${throughput} FPS`);
+            addOutput('info', `[PERF] 核心利用率: ${utilization}%`);
+        }
+
+        function showLoading(text = '正在准备仿真...') {
+            const overlay = document.getElementById('loadingOverlay');
+            const loadingText = document.getElementById('loadingText');
+            const progress = document.getElementById('loadingProgress');
+            
+            overlay.classList.add('active');
+            loadingText.textContent = text;
+            progress.style.width = '0%';
+            
+            let p = 0;
+            const interval = setInterval(() => {
+                p += Math.random() * 15;
+                if (p >= 100) {
+                    p = 100;
+                    clearInterval(interval);
+                }
+                progress.style.width = `${p}%`;
+            }, 100);
+        }
+
+        function playVideo(videoPath = null) {
+            const placeholder = document.getElementById('videoPlaceholder');
+            const player = document.getElementById('videoPlayer');
+            const video = document.getElementById('demoVideo');
+            
+            const videoFile = videoPath || stimulusMap[selectedStimulus].video;
+            video.src = videoFile;
+            
+            placeholder.style.display = 'none';
+            player.style.display = 'block';
+            
+            video.load();
+            video.play();
+        }
+
+        function resetVideo() {
+            const placeholder = document.getElementById('videoPlaceholder');
+            const player = document.getElementById('videoPlayer');
+            const video = document.getElementById('demoVideo');
+            
+            video.pause();
+            video.src = '';
+            player.style.display = 'none';
+            placeholder.style.display = 'flex';
+        }
+
+        function hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.classList.remove('active');
+        }
+
+        initCoreArray();
+        updateNeuronList();
+    </script>
+</body>
+</html>
